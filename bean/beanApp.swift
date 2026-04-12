@@ -5,19 +5,32 @@
 //  Created by Anthony on 4/10/26.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @main
 struct beanApp: App {
+    @StateObject private var scaleMan = ScaleManager()
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Brew.self,
+            Basket.self,
+            Profile.self,
+            Grinder.self,
+            Equipment.self,
+            Bean.self,
+
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        let modelConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false
+        )
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(
+                for: schema,
+                configurations: [modelConfiguration]
+            )
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
@@ -28,5 +41,6 @@ struct beanApp: App {
             ContentView()
         }
         .modelContainer(sharedModelContainer)
+        .environmentObject(scaleMan)
     }
 }

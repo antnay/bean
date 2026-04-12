@@ -1,0 +1,15 @@
+{
+  "originHash" : "1818abfc693d0957859f7a119961e975796a1b25a3d26e126c5894b8e29e8f2b",
+  "pins" : [
+    {
+      "identity" : "acaia_sdk_ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/acaia/acaia_sdk_ios",
+      "state" : {
+        "revision" : "f55246ab6e207ba32e2dbe96cc644f8f9956f188",
+        "version" : "1.5.2"
+      }
+    }
+  ],
+  "version" : 3
+}
