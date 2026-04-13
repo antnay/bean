@@ -1,5 +1,5 @@
 //
-//  Brew.swift
+//  HomeView.swift
 //  bean
 //
 //  Created by Anthony on 4/11/26.
@@ -9,7 +9,7 @@ import AcaiaSDK
 import SwiftData
 import SwiftUI
 
-struct BrewView: View {
+struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var scaleMan: ScaleManager
     @Query private var containers: [ScaleContainer]
@@ -33,7 +33,7 @@ struct BrewView: View {
                         scaleMan.tare()
                     }
                 )
-                .buttonStyle(.automatic)
+                .buttonStyle(.bordered)
                 Button(
                     "Timer \(scaleMan.isTimerStarted ? "Stop" : "Start")",
                     action: {
@@ -82,6 +82,7 @@ struct BrewView: View {
                     }
                 }
             }
+            .presentationDetents([.medium])
         }
     }
 }

@@ -16,15 +16,55 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
+            HomeView()
+                .tabItem {
+                    Label("Home", systemImage: "house")
+                }
             BrewView()
                 .tabItem {
-                    Label("Brew", systemImage: "house")
+                    Label("Brew", systemImage: "cup.and.saucer.fill")
+                }
+            HistoryView()
+                .tabItem {
+                    Label("History", systemImage: "clock.fill")
                 }
             SettingsView()
                 .tabItem {
-                    Label("Settings", systemImage: "gear")
+                    Label("Setup", systemImage: "book.closed.fill")
                 }
         }
+        //        NavigationSplitView {
+        //            List {
+        //                ForEach(items) { item in
+        //                    NavigationLink {
+        //                        Text(
+        //                            "Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))"
+        //                        )
+        //                    } label: {
+        //                        Text(
+        //                            item.timestamp,
+        //                            format: Date.FormatStyle(
+        //                                date: .numeric,
+        //                                time: .standard
+        //                            )
+        //                        )
+        //                    }
+        //                }
+        //                .onDelete(perform: deleteItems)
+        //            }
+        //            .toolbar {
+        //                ToolbarItem(placement: .navigationBarTrailing) {
+        //                    EditButton()
+        //                }
+        //                ToolbarItem {
+        //                    Button(action: addItem) {
+        //                        Label("Add Item", systemImage: "plus")
+        //                    }
+        //                }
+        //            }
+        //        } detail: {
+        //            Text("Select an item")
+        //        }
     }
 
     private func addItem() {
