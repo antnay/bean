@@ -14,10 +14,18 @@ struct BrewView: View {
     @EnvironmentObject private var scaleMan: ScaleManager
     @Query private var containers: [ScaleContainer]
 
+    @State private var showSaveContainer: Bool = false
+    @State private var containerName = ""
+    @State private var capturedWeight: Double = 0.0
+
     var body: some View {
         VStack {
-            Text("\(scaleMan.weight, specifier: "%.1f") g")
-            Text("\(scaleMan.timerSeconds, specifier: "%.0f") s")
+            VStack {
+                Text("\(scaleMan.weight, specifier: "%.1f") g")
+                    .font(Font.largeTitle.bold())
+                Text("\(scaleMan.timerDisplay) s")
+                    .font(Font.largeTitle.bold())
+            }
             VStack {
                 Button(
                     "Tare",
@@ -32,36 +40,47 @@ struct BrewView: View {
                         scaleMan.timerButton()
                     }
                 )
-                .buttonStyle(.automatic)
-                //                if scaleMan.isTimerStarted {
-                //                    Button(
-                //                        "Timer \(scaleMan.isTimerPaused ? "Continue" : "Pause")",
-                //                        action: {
-                //                            scaleMan.pauseTimer()
-                //                        }
-                //                    )
-                //                    .buttonStyle(.automatic)
-                //                }
-                Button(
-                    "Save Container",
-                    action: {
-                        let container = ScaleContainer(name: <#T##String#>, weight: <#T##Double#>)
-                        scaleMan.saveContainer(container: container)
+                .buttonStyle(.bordered)
+                Button("Save Container") {
+                    capturedWeight = Double(scaleMan.weight)
+                    containerName = ""
+                    showSaveContainer = true
+                }
+                .buttonStyle(.bordered)
+                List {
+                    ForEach(containers) { container in
+                        Text(
+                            "\(container.name) - \(container.weight, specifier: "%.1f") g"
+                        )
                     }
-                )
-                .buttonStyle(.automatic)
-            }
-            List {
-                ForEach(containers) { container in
-                    Text(
-                        "\(container.name) - \(container.weight, specifier: "%.1f") g"
-                    )
                 }
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                Text("save")
+        .sheet(isPresented: $showSaveContainer) {
+            NavigationStack {
+                Form {
+                    Text("\(capturedWeight, specifier: "%.1f") g")
+                        .font(.title2)
+                    TextField("Container name", text: $containerName)
+                }
+                .navigationTitle("New Container")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { showSaveContainer = false }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") {
+                            let container = ScaleContainer(
+                                name: containerName,
+                                weight: capturedWeight
+                            )
+                            modelContext.insert(container)
+                            try? modelContext.save()
+                            showSaveContainer = false
+                        }
+                        .disabled(containerName.isEmpty)
+                    }
+                }
             }
         }
     }

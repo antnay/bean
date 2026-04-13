@@ -162,3 +162,16 @@ final class Profile: Identifiable {
         self.pressure = pressure
     }
 }
+
+@Model
+final class ScaleContainer: Identifiable {
+    var id: UUID = UUID()
+    var name: String
+    var weight: Double
+
+    init(name: String, weight: Double) {
+        self.name = name
+        self.weight = weight
+    }
+}
+
