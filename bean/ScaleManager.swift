@@ -1,5 +1,5 @@
 //
-//  Acacia.swift
+//  ScaleManager.swift
 //  bean
 //
 //  Created by Anthony on 4/10/26.
@@ -22,7 +22,7 @@ enum BrewMode {
 }
 
 class ScaleManager: NSObject, ObservableObject, CBCentralManagerDelegate {
-    var modelContext: ModelContext?
+    var modelContext: ModelContext
     @Published var autoScan: Bool = true
     private var scanTimer: Timer?
     private var btMan: CBCentralManager!
@@ -34,19 +34,24 @@ class ScaleManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     }
     @Published var isBluetoothOn: Bool = false
 
+    var netWeight: Float {
+        weight - containerOffset
+    }
+    @Published var containerOffset: Float = 0.0
     @Published var isTimerPaused: Bool = false
     @Published var isTimerStarted: Bool = false
     @Published var weight: Float = 0.0
     @Published var unit: AcaiaScaleWeightUnit = .gram
     @Published var timerSeconds: Int = 0
-    @Published var timerDisplay: String = "0.00"
+    @Published var timerDisplay: String = "00.00"
     @Published var isConnected: Bool = false
     @Published var mode: Mode = .brew
     @Published var discoveredScales: [AcaiaScale] = []
 
-    override init() {
+    init(modelContext: ModelContext) {
+        self.modelContext = modelContext
         super.init()
-        btMan = CBCentralManager.init(delegate: self, queue: nil)
+        btMan = CBCentralManager(delegate: self, queue: nil)
 
         NotificationCenter.default.addObserver(
             self,
@@ -82,7 +87,7 @@ class ScaleManager: NSObject, ObservableObject, CBCentralManagerDelegate {
             name: .init(rawValue: AcaiaScaleTimer),
             object: nil
         )
-
+        refreshContainerOffset()
     }
 
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
@@ -156,6 +161,12 @@ class ScaleManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         }
     }
 
+    func refreshContainerOffset() {
+        containerOffset =
+            ModelDefaults.shared.lastContainer(in: modelContext)?.weight ?? 0.0
+        print(containerOffset)
+    }
+
     func scan() {
         guard isBluetoothOn else { return }
         if autoScan {
@@ -183,7 +194,7 @@ class ScaleManager: NSObject, ObservableObject, CBCentralManagerDelegate {
             if isTimerStarted {
                 isTimerStarted = false
                 isTimerPaused = false
-                timerDisplay = "0:00"
+                timerDisplay = "00:00"
                 timerSeconds = 0
                 scale.stopTimer()
             } else {
@@ -212,15 +223,25 @@ class ScaleManager: NSObject, ObservableObject, CBCentralManagerDelegate {
 
     func brewMode() {
         self.mode = .brew
+        //        clearContainer()
     }
 
     // If you have a frequently used container in your weighing workflow, you can save the weight of the
     // container using the Tare Save function. This will allow you to weigh the container with contents,
     // then trigger Tare Save to deduct the container weight and obtain the net weight.
     func saveContainer(container: ScaleContainer) {
-        guard let modelContext else { return }
         modelContext.insert(container)
         try? modelContext.save()
+        ModelDefaults.shared.lastContainerID = container.id
+    }
+
+    func loadContainer(container: ScaleContainer) {
+        self.containerOffset = container.weight
+        ModelDefaults.shared.lastContainerID = container.id
+    }
+
+    private func clearContainer() {
+        self.containerOffset = 0.0
     }
 
     // Scale will autostart automatically when weight increase.
@@ -238,6 +259,7 @@ class ScaleManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         self.isConnected = false
         self.mode = .brew
         self.timerSeconds = 0
+        self.timerDisplay = "00.00"
         self.weight = 0.0
     }
 

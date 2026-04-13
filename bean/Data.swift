@@ -167,9 +167,9 @@ final class Profile: Identifiable {
 final class ScaleContainer: Identifiable {
     var id: UUID = UUID()
     var name: String
-    var weight: Double
+    var weight: Float
 
-    init(name: String, weight: Double) {
+    init(name: String, weight: Float) {
         self.name = name
         self.weight = weight
     }

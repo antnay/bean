@@ -10,8 +10,6 @@ import SwiftUI
 
 @main
 struct beanApp: App {
-    @StateObject private var scaleMan = ScaleManager()
-    @Environment(\.scenePhase) private var scenePhase
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Brew.self,
@@ -20,6 +18,7 @@ struct beanApp: App {
             Grinder.self,
             Equipment.self,
             Bean.self,
+            ScaleContainer.self,
 
         ])
         let modelConfiguration = ModelConfiguration(
@@ -36,6 +35,13 @@ struct beanApp: App {
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var scaleMan: ScaleManager
+    
+    init() {
+           let context = sharedModelContainer.mainContext
+           _scaleMan = StateObject(wrappedValue: ScaleManager(modelContext: context))
+       }
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -57,3 +63,4 @@ struct beanApp: App {
                 }
     }
 }
+

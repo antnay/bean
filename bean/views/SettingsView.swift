@@ -38,7 +38,7 @@ struct ScaleSettingsView: View {
             Form {
                 Section {
                     Toggle(
-                        "auto scan",
+                        "Auto scan",
                         systemImage:
                             "arrow.trianglehead.2.clockwise.rotate.90.circle.fill",
                         isOn: $scaleMan.autoScan
