@@ -37,11 +37,13 @@ struct beanApp: App {
     }()
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var scaleMan: ScaleManager
-    
+
     init() {
-           let context = sharedModelContainer.mainContext
-           _scaleMan = StateObject(wrappedValue: ScaleManager(modelContext: context))
-       }
+        let context = sharedModelContainer.mainContext
+        _scaleMan = StateObject(
+            wrappedValue: ScaleManager(modelContext: context)
+        )
+    }
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -49,18 +51,21 @@ struct beanApp: App {
         .modelContainer(sharedModelContainer)
         .environmentObject(scaleMan)
         .onChange(of: scenePhase) { _, phase in
-                    switch phase {
-                    case .background:
-                        scaleMan.disconnect()
-                        scaleMan.stopAutoScan()
-                    case .active:
-                        scaleMan.scan()
-                    case .inactive:
-                        break
-                    @unknown default:
-                        break
-                    }
-                }
+            switch phase {
+            case .background:
+                scaleMan.disconnect()
+                scaleMan.stopAutoScan()
+                break
+            case .active:
+                scaleMan.scan()
+                break
+            case .inactive:
+                scaleMan.disconnect()
+                scaleMan.stopAutoScan()
+                break
+            @unknown default:
+                break
+            }
+        }
     }
 }
-

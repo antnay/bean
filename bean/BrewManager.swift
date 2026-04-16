@@ -46,7 +46,7 @@ class ModelDefaults {
         )
         return try? context.fetch(descriptor).first
     }
-    
+
     func lastEquipment(in context: ModelContext) -> Equipment? {
         guard let id = lastEquipmentID else { return nil }
         let descriptor = FetchDescriptor<Equipment>(
@@ -54,7 +54,7 @@ class ModelDefaults {
         )
         return try? context.fetch(descriptor).first
     }
-    
+
     func lastBasket(in context: ModelContext) -> Basket? {
         guard let id = lastBasketID else { return nil }
         let descriptor = FetchDescriptor<Basket>(
@@ -62,7 +62,7 @@ class ModelDefaults {
         )
         return try? context.fetch(descriptor).first
     }
-    
+
     func lastBean(in context: ModelContext) -> Bean? {
         guard let id = lastBeanID else { return nil }
         let descriptor = FetchDescriptor<Bean>(
@@ -70,7 +70,7 @@ class ModelDefaults {
         )
         return try? context.fetch(descriptor).first
     }
-    
+
     func lastContainer(in context: ModelContext) -> ScaleContainer? {
         guard let id = lastContainerID else { return nil }
         let descriptor = FetchDescriptor<ScaleContainer>(

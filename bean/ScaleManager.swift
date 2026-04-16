@@ -11,9 +11,22 @@ import CoreBluetooth
 import Foundation
 import SwiftData
 
+struct FlowData: Identifiable {
+    let id = UUID()
+    let time: Double
+    let flowRate: Double
+}
+
+struct MassData: Identifiable {
+    let id = UUID()
+    let time: Double
+    let weight: Float
+}
+
 enum Mode {
-    case container
     case brew
+    case container
+    case scale
 }
 
 enum BrewMode {
@@ -43,10 +56,19 @@ class ScaleManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     @Published var weight: Float = 0.0
     @Published var unit: AcaiaScaleWeightUnit = .gram
     @Published var timerSeconds: Int = 0
-    @Published var timerDisplay: String = "00.00"
+    @Published var timerDisplay: String = "00:00"
     @Published var isConnected: Bool = false
-    @Published var mode: Mode = .brew
+    @Published var mode: Mode = .scale
     @Published var discoveredScales: [AcaiaScale] = []
+    private var lastWeight: Float = 0.0
+    private var lastWeightTime: Date = .now
+    private var lastWeightUpdate: Date = Date.distantPast
+    private var lastTimerUpdate: Date = .distantPast
+    private var displayTimer: Timer?
+    @Published var flowSamples: [FlowData] = []
+    @Published var weightSamples: [MassData] = []
+    private var flowHistory: [Double] = []
+    private var brewStartTime: Date?
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -101,17 +123,19 @@ class ScaleManager: NSObject, ObservableObject, CBCentralManagerDelegate {
 
     @objc private func didConnect(_ notif: NSNotification) {
         DispatchQueue.main.async {
-            self.stopAutoScan()
             self.isConnected = true
+            self.stopAutoScan()
             if let scale = AcaiaManager.shared().connectedScale {
                 self.lastScaleID = scale.name
             }
+            AcaiaManager.shared().enableBackgroundRecovery = true
         }
     }
 
     @objc private func didDisconnect(_ notif: NSNotification) {
         DispatchQueue.main.async {
             self.disconnectRoutine()
+            AcaiaManager.shared().enableBackgroundRecovery = false
             self.scan()
         }
     }
@@ -136,28 +160,75 @@ class ScaleManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     }
 
     @objc private func onWeight(_ notif: NSNotification) {
+        let now = Date()
+        guard now.timeIntervalSince(lastWeightUpdate) > 0.1 else { return }
+        lastWeightUpdate = now
+
+        let weight =
+            notif.userInfo?[AcaiaScaleUserInfoKeyWeight] as? Float ?? 0.0
+        if self.mode == .scale && weight == self.weight { return }
+
         DispatchQueue.main.async {
-            self.weight =
-                notif.userInfo?[AcaiaScaleUserInfoKeyWeight] as? Float ?? 0.0
+            self.objectWillChange.send()
+            self.weight = weight
+
+            if self.mode == .brew && self.isTimerStarted {
+                let deltaT = now.timeIntervalSince(self.lastWeightTime)
+                if deltaT > 0.25 {
+                    let rawFlow = Double(self.weight - self.lastWeight) / deltaT
+                    let clampedFlow = max(0, min(rawFlow, 10))
+                    self.flowHistory.append(clampedFlow)
+                    if self.flowHistory.count > 3 {
+                        self.flowHistory.removeFirst()
+                    }
+                    let smoothedFlow =
+                        self.flowHistory.reduce(0, +)
+                        / Double(self.flowHistory.count)
+
+                    let elapsed = now.timeIntervalSince(
+                        self.brewStartTime ?? now
+                    )
+
+                    self.flowSamples.append(
+                        FlowData(time: elapsed, flowRate: smoothedFlow)
+                    )
+                    self.weightSamples.append(
+                        MassData(time: elapsed, weight: max(0, self.weight))
+                    )
+
+                    self.lastWeight = self.weight
+                    self.lastWeightTime = now
+                }
+            } else {
+                self.lastWeight = self.weight
+                self.lastWeightTime = now
+            }
         }
     }
-
     @objc private func onTimer(_ notif: NSNotification) {
+        let now = Date()
+        guard now.timeIntervalSince(lastTimerUpdate) > 0.3 else { return }
+        lastTimerUpdate = now
+
         guard
             let time: Int = notif.userInfo?[AcaiaScaleUserInfoKeyTimer] as? Int
-        else { return }
-        print("timer notification")
+        else {
+            print("returning from onTimer (guard failed")
+            return
+        }
+        guard time != self.timerSeconds else { return }
         DispatchQueue.main.async {
+            print("timer: \(time)")
+            print("mode: \(self.mode)")
             if !self.isTimerStarted {
                 self.isTimerStarted = true
             }
+            self.timerSeconds = time
             self.timerDisplay = String(
                 format: "%02d:%02d",
                 time / 60,
                 time % 60
             )
-            self.timerSeconds = time
-            AcaiaManager.shared().connectedScale?.startTimer()
         }
     }
 
@@ -193,18 +264,31 @@ class ScaleManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         if let scale = AcaiaManager.shared().connectedScale {
             if isTimerStarted {
                 isTimerStarted = false
-                isTimerPaused = false
-                timerDisplay = "00:00"
-                timerSeconds = 0
-                scale.stopTimer()
+                // FIXME: pressing stop timer resets timer, it should instead just stop it and not reset
+                //                isTimerPaused = false
+                //                timerDisplay = "00:00"
+                //                timerSeconds = 0
+                scale.pauseTimer()
             } else {
+                scale.stopTimer()
                 isTimerStarted = true
+                if self.mode == .brew {
+                    print("starting brew timer")
+                    startBrew()
+                } else {
+                    print("starting scale timer")
+                }
                 scale.startTimer()
+                //                timerSeconds = 0
+                //                displayTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+                //                    guard let self else { return }
+                //                    self.timerSeconds += 1
+                //                    self.timerDisplay = String(format: "%02d:%02d", self.timerSeconds / 60, self.timerSeconds % 60)
+                //                }
             }
         }
     }
 
-    // scale did not pause in testing
     func pauseTimer() {
         if let scale = AcaiaManager.shared().connectedScale {
             if isTimerPaused {
@@ -218,12 +302,36 @@ class ScaleManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     }
 
     func containerMode() {
+        print("container mode")
         self.mode = .container
     }
 
     func brewMode() {
+        print("brew mode")
+        clearTimer()
         self.mode = .brew
-        //        clearContainer()
+        clearContainer()
+    }
+
+    func scaleMode() {
+        print("scale mode")
+        clearTimer()
+        self.mode = .scale
+    }
+
+    // Starts the brew process.
+    // TODO: case when user does not have auto timer on scale sofrware and presses start brew in app
+    // TODO: case when user has auto timer on scale software and wants to start brew from app
+    func startBrew() {
+        flowSamples = [FlowData(time: 0, flowRate: 0)]
+        weightSamples = [MassData(time: 0, weight: weight)]
+        flowHistory = []
+        print("flowsamples count: \(flowSamples.count)")
+        print("weightsamples count: \(weightSamples.count)")
+        lastWeight = weight
+        lastWeightTime = Date()
+        brewStartTime = Date()
+        clearTimer()
     }
 
     // If you have a frequently used container in your weighing workflow, you can save the weight of the
@@ -240,32 +348,33 @@ class ScaleManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         ModelDefaults.shared.lastContainerID = container.id
     }
 
-    private func clearContainer() {
-        self.containerOffset = 0.0
-    }
-
-    // Scale will autostart automatically when weight increase.
-    // App just needs to know when it started for logging and graphing
-    // maybe unnecessary
-    func autoStartTimer() {
-    }
-
     func stopAutoScan() {
+        print("stopping autoscan")
         scanTimer?.invalidate()
         scanTimer = nil
     }
 
+    private func clearContainer() {
+        self.containerOffset = 0.0
+    }
+
+    private func clearTimer() {
+        self.timerDisplay = "00:00"
+        self.isTimerStarted = false
+        self.isTimerPaused = false
+        print("cleared timer")
+    }
+
     private func disconnectRoutine() {
         self.isConnected = false
-        self.mode = .brew
-        self.timerSeconds = 0
-        self.timerDisplay = "00.00"
+        self.timerDisplay = "disconnected"
         self.weight = 0.0
+        print("disconnected from scale")
     }
 
     private func startAutoScan() {
+        print("starting autoscan")
         guard scanTimer == nil else { return }
-        scanForScales()
         scanTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) {
             [weak self] _ in
             guard let self, !self.isConnected else {
@@ -277,6 +386,7 @@ class ScaleManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     }
 
     private func scanForScales() {
+        print("scanning for scales")
         AcaiaManager.shared().startScan(0.5)
     }
 }

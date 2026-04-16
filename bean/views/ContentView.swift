@@ -10,28 +10,51 @@ import SwiftData
 import SwiftUI
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
+    //    @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var scaleMan: ScaleManager
-    @Query private var items: [Brew]
+    //    @Query private var items: [Brew]
 
     var body: some View {
         TabView {
-            ScaleView()
+
+            AppBackground { ScaleView() }
                 .tabItem {
                     Label("Scale", systemImage: "house")
                 }
-            BrewView()
+                .task(priority: .utility) {
+                    scaleMan.scaleMode()
+                }
+            AppBackground { BrewView() }
                 .tabItem {
                     Label("Brew", systemImage: "cup.and.saucer.fill")
                 }
-            HistoryView()
+                .task(priority: .utility) {
+                    scaleMan.brewMode()
+                }
+            AppBackground { HistoryView() }
                 .tabItem {
                     Label("History", systemImage: "clock.fill")
                 }
-            SettingsView()
+            AppBackground { SetupView() }
                 .tabItem {
                     Label("Setup", systemImage: "book.closed.fill")
                 }
+        }
+        .scrollDisabled(true)
+    }
+}
+
+struct AppBackground<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder _ content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        ZStack {
+            Color.appBackground.ignoresSafeArea()
+            content
         }
     }
 }

@@ -174,4 +174,3 @@ final class ScaleContainer: Identifiable {
         self.weight = weight
     }
 }
-

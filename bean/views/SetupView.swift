@@ -9,22 +9,23 @@ import AcaiaSDK
 import SwiftData
 import SwiftUI
 
-struct SettingsView: View {
+struct SetupView: View {
     @EnvironmentObject private var scaleMan: ScaleManager
 
     var body: some View {
         NavigationStack {
             List {
-                NavigationLink("Scales", destination: ScaleSettingsView())
                 NavigationLink("Baskets", destination: BasketSettingsView())
+                NavigationLink("Beans", destination: BeanSettingsView())
                 NavigationLink(
                     "Equipment",
                     destination: EquipmentSettingsView()
                 )
-                NavigationLink("Beans", destination: BeanSettingsView())
+                NavigationLink("Scales", destination: ScaleSettingsView())
             }
         }
-        .navigationTitle("Settings")
+        .scrollDisabled(true)
+        .background { Color.appBackground.ignoresSafeArea() }
     }
 }
 
@@ -133,10 +134,6 @@ struct BasketSettingsView: View {
             Text("Baskets")
         }
     }
-}
-
-#Preview {
-    BasketSettingsView()
 }
 
 struct EquipmentSettingsView: View {

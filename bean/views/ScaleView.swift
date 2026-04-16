@@ -24,41 +24,21 @@ struct ScaleView: View {
             Spacer()
             VStack(spacing: 8) {
                 if scaleMan.mode == .container {
-                    Text("\(scaleMan.netWeight, specifier: "%.1f")")
-                        .font(
-                            .system(size: 72, weight: .bold, design: .rounded)
-                        )
-                        .monospacedDigit()
+                    NetWeightDisplay()
                 } else {
-                    Text("\(scaleMan.weight, specifier: "%.1f")")
-                        .font(
-                            .system(size: 72, weight: .bold, design: .rounded)
-                        )
-                        .monospacedDigit()
+                    WeightDisplay()
                 }
                 Text("grams")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                Text(scaleMan.timerDisplay)
-                    .font(
-                        .system(
-                            size: 36,
-                            weight: .semibold,
-                            design: .monospaced
-                        )
-                    )
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                TimerDisplay()
             }
-
             Spacer()
             HStack {
                 Button(action: {
-                    switch scaleMan.mode {
-                    case .container: scaleMan.brewMode()
-                    case .brew: scaleMan.containerMode()
-                    }
+                    scaleMan.mode == .scale
+                        ? scaleMan.containerMode() : scaleMan.scaleMode()
                 }) {
                     Image(systemName: "archivebox.fill")
                 }

@@ -8,11 +8,27 @@
 import SwiftUI
 
 struct BrewView: View {
-    var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
-    }
-}
+    @EnvironmentObject private var scaleMan: ScaleManager
 
-#Preview {
-    BrewView()
+    var body: some View {
+        VStack {
+            ChartView(
+                flow: scaleMan.flowSamples,
+                mass: scaleMan.weightSamples
+            )
+            TimerDisplay()
+            WeightDisplay()
+            Button(action: scaleMan.timerButton) {
+                Label(
+                    scaleMan.isTimerStarted
+                        ? "Stop timer" : "Start timer",
+                    systemImage: scaleMan.isTimerStarted
+                        ? "stop.fill" : "play.fill"
+                )
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+        }
+    }
 }
